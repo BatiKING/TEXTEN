@@ -1,0 +1,105 @@
+DISCORD SIDE
+
+Bot will create 2 new categories:
+
+- YOUR TEXTEN FIGHTS
+
+- TEXTEN ARENA
+
+BOT will create 2 Private channels in "YOUR TEXTEN FIGHTS" category and one Public channel in "TEXTEN ARENA" category - there will be one private channel per player, where players will take their turns
+
+BOT will create a LOG channel in the TEXTEN ARENA category - all results will be stored there
+
+TEXTEN ARENA category will keep last 10 fights, and will start purging them once this limit is reached.
+
+
+
+MECHANICS
+
+"TIME" will be represented by turns - probably 60 (?)
+
+Each player has a healtbar - 180HP
+
+Arena is a 6x7 grid
+
+Sidesteps move characters around eachother, not further away - only backdash moves characters further away
+
+MOVES
+backdash
+frontdash
+duck/low block
+sidestep (left and right)
+
+jab(s)
+highcrush - punishable
+hopkick - punishable
+backswing blow
+homing 
+
+TextenMove class - attributes
+
+
+
+
+
+All moves will have some sort of frame data - block and hit interactions will lead to frame adventage
+some whiffs will be punishable - only one player will take his turn as a "punish" (can fail if choose wrong move/action)
+
+Moves will have specific range - 1 or 2 -
+1 - will only reach if both characters are next to eachother
+2 - will reach of there is 1 quare space between characters, - it will be punishable, and it will bring the attacking character 1 square closed to the defending character.
+
+
+Haradas finger - % chance that a move will randomly crush other move
+
+Haradas blessing - % chance for a player to stay alive after "KO" - with bonus 5HP 
+
+
+MAX LINE LENGTH BEFORE WRAPING ON A SMARTPHONE... 47 CHARS FORMATED AS CODE! (need to test other devices sometime)
+-----------------------------------------------
+OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO
+
+
+TO DO!
+
+
+Create a CleanUp function - delete all games older than x-days - (check channels created_at attribute)
+
+
+
+Pomysły ziomeczków
+
+
+Backdash nie ma bloku 
+
+Dodatkowa mechanika kamień papier nożyce pod ścianą 
+
+Automatyczny whiff punish 
+
+
+
+
+
+GRID:
++------+------+------+------+------+------+
+|      |      |      |      |      |      |
+|      |      |      |      |      |      |
++------+------+------+------+------+------+
+|      |      |      |      |      |      |
+|      |      |      |      |      |      |
++------+------+------+------+------+------+
+|      |      |      |      |      |      |
+|      |      |      |      |      |      |
++------+------+------+------+------+------+
+|      |      |      |      |      |      |
+|      |      |      |      |      |      |
++------+------+------+------+------+------+
+|      |      |      |      |      |      |
+|      |      |      |      |      |      |
++------+------+------+------+------+------+
+|      |      |      |      |      |      |
+|      |      |      |      |      |      |
++------+------+------+------+------+------+
+|      |      |      |      |      |      |
+|      |      |      |      |      |      |
++------+------+------+------+------+------+
