@@ -161,9 +161,10 @@ async def on_message(message):
             game_created = GM.create_new_game(game_id,message.author.id, player2.id, message.author.name, player2.name,player1_room.id, player2_room.id, general_room.id)
             GM.delete_challenge(game_id)
             if game_created:
-                await player1_room.send("FIGHT!")
-                await player2_room.send("FIGHT!")
-                await general_room.send("FIGHT!")
+                start_message = game_created.get_match_start_message()
+                await player1_room.send(start_message)
+                await player2_room.send(start_message)
+                await general_room.send(start_message)
             # await player1_room.set_permissions(player2, read_messages=False, send_messages=False)
             # await player2_room.set_permissions(message.author, read_messages=False, send_messages=False)
         return  
@@ -182,8 +183,17 @@ async def on_message(message):
 
     game_id = GM.check_if_message_sent_from_game_room(message.channel.id)
     if game_id:
+        game_object = GM.get_game_object(game_id)
         response = GM.handle_game_room_message(game_id, message)
-        await message.channel.send(response)
+        if response[1]:
+            p1_room = discord.utils.find(lambda g: g.id == game_object.p1_room_id, message.channel.guild.channels)
+            p2_room = discord.utils.find(lambda g: g.id == game_object.p2_room_id, message.channel.guild.channels) 
+            general_room = discord.utils.find(lambda g: g.id == game_object.general_room_id, message.channel.guild.channels)
+            await p1_room.send(response[0])
+            await p2_room.send(response[0])
+            await general_room.send(response[0])
+        else:
+            await message.channel.send(response[0])
         return
 
 async def game_over(game_object, channel):

@@ -4,6 +4,9 @@
 # from tkinter import Y
 from audioop import add
 import grid_layout
+import random
+
+
 
 class TextenGame:
     def __init__(self, game_id, p1_id, p2_id, p1_name, p2_name, p1_room_id, p2_room_id, general_room_id) -> None:
@@ -17,31 +20,53 @@ class TextenGame:
         self.general_room_id = general_room_id
         self.turn_counter = 0
         self.stage = TextenStage(self.p1_room_id, self.p2_room_id)
-    
-    def handle_message(self, message):
-        #response = f"Message delivered to game id {self.game_id}, from room_id {message.channel.id}"
-        message_params = message.content.split(' ')
-        print(message_params)
-        if len(message_params) == 4:
-            p1_x = int(message_params[0])
-            p1_y = int(message_params[1])
-            p2_x = int(message_params[2])
-            p2_y = int(message_params[3])
-            self.stage.player1_character.set_position(p1_x,p1_y)
-            self.stage.player2_character.set_position(p2_x,p2_y)
-        ss_dir = message.content
-        self.stage.update_facing_directions(self.stage.player1_character, self.stage.player2_character)
-        pre_ss_p1_position = self.stage.player1_character.get_position()
-        pre_ss_p2_position = self.stage.player2_character.get_position() 
-        ss_to_position = self.stage.try_sidestep(self.stage.player1_character, self.stage.player2_character, ss_dir)
-        additional_message = ''
-        if ss_to_position is None:
-            additional_message = "\n p1 couldn't sidestep"
+        self.current_turn_player_id = self.coin_flip()
+
+    def coin_flip(self):
+        if random.randint(0,1):
+            return self.p1_id
         else:
-            self.stage.player1_character.set_position(ss_to_position[0], ss_to_position[1])
-        #response = f"p1_pre_ss = {pre_ss_p1_position}, p2_pre_ss = {pre_ss_p2_position}, - SS coordinate = {ss_to_position} - p1_post_ss = {self.stage.player1_character.get_position()}, p2_post_ss = {self.stage.player2_character.get_position()}"
-        response = "```\n" + grid_layout.position_characters_on_grid(grid_layout.grid_layout, self.stage.player1_character, self.stage.player2_character) + "```" + additional_message
-        return response
+            return self.p2_id
+            
+    def get_match_start_message(self):
+        if self.current_turn_player_id == self.p1_id:
+            return f"Coinflip: HEADS win! {self.p1_name} goes first!\nFIGHT!"
+        else:
+            return f"Coinflip: TAILS win! {self.p2_name} goes first!\nFIGHT!"
+
+    def handle_message(self, message):
+        """This method should return a tuple, send_to_all_rooms and response_message, -
+         send_to_all_rooms is meant to inform main app if this response should be sent to all room chats, or if it should only go to sender"""
+
+        if message.author.id == self.current_turn_player_id:
+
+            message_params = message.content.split(' ')
+            print(message_params)
+            if len(message_params) == 4:
+                p1_x = int(message_params[0])
+                p1_y = int(message_params[1])
+                p2_x = int(message_params[2])
+                p2_y = int(message_params[3])
+                self.stage.player1_character.set_position(p1_x,p1_y)
+                self.stage.player2_character.set_position(p2_x,p2_y)
+            ss_dir = message.content
+            self.stage.update_facing_directions(self.stage.player1_character, self.stage.player2_character)
+            pre_ss_p1_position = self.stage.player1_character.get_position()
+            pre_ss_p2_position = self.stage.player2_character.get_position() 
+            ss_to_position = self.stage.try_sidestep(self.stage.player1_character, self.stage.player2_character, ss_dir)
+            additional_message = ''
+            if ss_to_position is None:
+                additional_message = "\n p1 couldn't sidestep"
+            else:
+                self.stage.player1_character.set_position(ss_to_position[0], ss_to_position[1])
+            #response = f"p1_pre_ss = {pre_ss_p1_position}, p2_pre_ss = {pre_ss_p2_position}, - SS coordinate = {ss_to_position} - p1_post_ss = {self.stage.player1_character.get_position()}, p2_post_ss = {self.stage.player2_character.get_position()}"
+            response = "```\n" + grid_layout.position_characters_on_grid(grid_layout.grid_layout, self.stage.player1_character, self.stage.player2_character) + "```" + additional_message
+            send_to_all_rooms = True
+            return response, send_to_all_rooms
+        else:
+            response = "```\n" + grid_layout.position_characters_on_grid(grid_layout.grid_layout, self.stage.player1_character, self.stage.player2_character) + "```" + "It's not your turn"
+            send_to_all_rooms = False
+            return response, send_to_all_rooms
 
 class TextenStage:
     def __init__(self, player1_room_id, player2_room_id, width=6, height=7) -> None:
@@ -244,7 +269,7 @@ class GameManager:
 
     def create_new_game(self, game_id,p1_id, p2_id, p1_name, p2_name, p1_room_id, p2_room_id, general_room_id):        
         self.all_games[game_id] = TextenGame(game_id,p1_id, p2_id, p1_name, p2_name, p1_room_id, p2_room_id, general_room_id)
-        return True
+        return self.all_games[game_id]
 
     def get_game_object(self, game_id):
         if self.check_if_game_exist(game_id):
