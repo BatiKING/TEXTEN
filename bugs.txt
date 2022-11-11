@@ -1,0 +1,1 @@
+- SS doesn't work as expected when 2 players in the corner

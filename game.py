@@ -9,6 +9,10 @@ import random
 
 
 class TextenGame:
+
+
+
+
     def __init__(self, game_id, p1_id, p2_id, p1_name, p2_name, p1_room_id, p2_room_id, general_room_id) -> None:
         self.game_id = game_id
         self.p1_id = p1_id
@@ -19,9 +23,29 @@ class TextenGame:
         self.p2_room_id = p2_room_id
         self.general_room_id = general_room_id
         self.turn_counter = 0
-        self.stage = TextenStage(self.p1_room_id, self.p2_room_id)
-        self.current_turn_player_id = self.coin_flip()
-
+        self.stage = TextenStage(self.p1_room_id, p1_id, self.p2_room_id, p2_id)
+        # self.current_turn_player_id = self.coin_flip()
+        self.p1_action_taken_current_turn = False
+        self.p1_action = TextenAction(player_id=p1_id, player_character=self.stage.player1_character)
+        self.p2_action_taken_current_turn = False
+        self.p2_action = TextenAction(player_id=p2_id, player_character=self.stage.player2_character)
+        self.command_dict = {
+            'ssr': self.sidestep,
+            'ssl': self.sidestep,
+            'sidestep': self.sidestep,
+            'ss': self.sidestep,
+            'backdash': self.backdash,
+            'bd': self.backdash,
+            'bb': self.backdash,
+            'frontdash': self.frontdash,
+            'fd': self.frontdash,
+            'ff': self.frontdash,
+            'duck': self.duck,
+            'crouch': self.duck,
+            'db': self.duck,
+            'd': self.duck,
+            'position': self.set_players_position,
+        }
     def coin_flip(self):
         if random.randint(0,1):
             return self.p1_id
@@ -29,51 +53,121 @@ class TextenGame:
             return self.p2_id
             
     def get_match_start_message(self):
-        if self.current_turn_player_id == self.p1_id:
-            return f"Coinflip: HEADS win! {self.p1_name} goes first!\nFIGHT!"
-        else:
-            return f"Coinflip: TAILS win! {self.p2_name} goes first!\nFIGHT!"
+        # if self.current_turn_player_id == self.p1_id:
+        #     return f"Coinflip: HEADS win! {self.p1_name} goes first!\nFIGHT!"
+        # else:
+        #     return f"Coinflip: TAILS win! {self.p2_name} goes first!\nFIGHT!"
+        return f"FIGHT!"
 
     def handle_message(self, message):
-        """This method should return a tuple, send_to_all_rooms and response_message, -
+        """This method should return a tuple, response_message and send_to_all_rooms, -
          send_to_all_rooms is meant to inform main app if this response should be sent to all room chats, or if it should only go to sender"""
 
-        if message.author.id == self.current_turn_player_id:
-
-            message_params = message.content.split(' ')
-            print(message_params)
-            if len(message_params) == 4:
-                p1_x = int(message_params[0])
-                p1_y = int(message_params[1])
-                p2_x = int(message_params[2])
-                p2_y = int(message_params[3])
-                self.stage.player1_character.set_position(p1_x,p1_y)
-                self.stage.player2_character.set_position(p2_x,p2_y)
-            ss_dir = message.content
-            self.stage.update_facing_directions(self.stage.player1_character, self.stage.player2_character)
-            pre_ss_p1_position = self.stage.player1_character.get_position()
-            pre_ss_p2_position = self.stage.player2_character.get_position() 
-            ss_to_position = self.stage.try_sidestep(self.stage.player1_character, self.stage.player2_character, ss_dir)
-            additional_message = ''
-            if ss_to_position is None:
-                additional_message = "\n p1 couldn't sidestep"
-            else:
-                self.stage.player1_character.set_position(ss_to_position[0], ss_to_position[1])
-            #response = f"p1_pre_ss = {pre_ss_p1_position}, p2_pre_ss = {pre_ss_p2_position}, - SS coordinate = {ss_to_position} - p1_post_ss = {self.stage.player1_character.get_position()}, p2_post_ss = {self.stage.player2_character.get_position()}"
-            response = "```\n" + grid_layout.position_characters_on_grid(grid_layout.grid_layout, self.stage.player1_character, self.stage.player2_character) + "```" + additional_message
-            send_to_all_rooms = True
-            return response, send_to_all_rooms
-        else:
-            response = "```\n" + grid_layout.position_characters_on_grid(grid_layout.grid_layout, self.stage.player1_character, self.stage.player2_character) + "```" + "It's not your turn"
+        if (message.author.id == self.p1_id and self.p1_action_taken_current_turn) or (message.author.id == self.p2_id and self.p2_action_taken_current_turn):
+            #response = "```\n" + grid_layout.position_characters_on_grid(grid_layout.grid_layout, self.stage.player1_character, self.stage.player2_character) + "```" + "Wait for the next turn"
+            response = "Wait for the next turn"
             send_to_all_rooms = False
             return response, send_to_all_rooms
 
+
+        
+        message_params = message.content.split(' ')
+        player_action = self.p1_action if message.author.id == self.p1_id else self.p2_action
+
+        if func := self.command_dict.get(message_params[0].lower()):
+            success = func(player_action, *message_params)
+            if not success:
+                return "Incorrect input - type a valid command", False
+        else:
+            return "Incorrect input - type a valid command", False
+            
+
+        if message.author.id == self.p1_id:
+            self.p1_action_taken_current_turn = True
+        elif message.author.id == self.p2_id:
+            self.p2_action_taken_current_turn = True
+        
+        #this additional message is temporary
+        additional_message = ''
+        #response = f"p1_pre_ss = {pre_ss_p1_position}, p2_pre_ss = {pre_ss_p2_position}, - SS coordinate = {ss_to_position} - p1_post_ss = {self.stage.player1_character.get_position()}, p2_post_ss = {self.stage.player2_character.get_position()}"
+        
+        
+        #If both players took their turns, reset the "turn taken" flags and draw the stage 
+        if self.p1_action_taken_current_turn and self.p2_action_taken_current_turn:
+            self.p1_action_taken_current_turn = False
+            self.p2_action_taken_current_turn = False
+            response = "```\n" + grid_layout.position_characters_on_grid(grid_layout.grid_layout, self.stage.player1_character, self.stage.player2_character) + "```" + additional_message
+            send_to_all_rooms = True
+            return response, send_to_all_rooms
+
+        return "Wait for your opponents move", False
+
+    def set_players_position(self, action, *message_params):
+        print(message_params)
+        if len(message_params) > 4:
+            p1_x = int(message_params[-4])
+            p1_y = int(message_params[-3])
+            p2_x = int(message_params[-2])
+            p2_y = int(message_params[-1])
+            self.stage.player1_character.set_position(p1_x,p1_y)
+            self.stage.player2_character.set_position(p2_x,p2_y)
+            return True
+        return False
+
+    def sidestep(self, action, *args):
+        ss_dir_dict = {
+            'ssl': 'left',
+            'l': 'left',
+            'left': 'left',
+            'ssr': 'right',
+            'right': 'right',
+            'r': 'right'
+        }
+        ss_dir = ss_dir_dict.get(args[-1].lower())
+        if ss_dir:
+            self.stage.update_facing_directions(self.stage.player1_character, self.stage.player2_character)
+            pre_ss_p1_position = self.stage.player1_character.get_position()
+            pre_ss_p2_position = self.stage.player2_character.get_position() 
+            if action.player_id == self.p1_id:
+                ss_to_position = self.stage.try_sidestep(action.player_character, self.stage.player2_character, ss_dir)
+            elif action.player_id == self.p2_id:
+                ss_to_position = self.stage.try_sidestep(action.player_character, self.stage.player1_character, ss_dir)
+            additional_message = ''
+            if ss_to_position is None:
+                additional_message = f"\n {action.player_id} couldn't sidestep"
+            else:
+                action.player_character.set_position(ss_to_position[0], ss_to_position[1])
+            
+            return True
+        else:
+            return False
+
+        
+
+    def backdash(self, action, *args):
+        self.stage.update_facing_directions(self.stage.player1_character, self.stage.player2_character)
+        if action.player_id == self.p1_id:
+            bd_to_position = self.stage.try_backdash(action.player_character, self.stage.player2_character)
+        elif action.player_id == self.p2_id:
+            bd_to_position = self.stage.try_backdash(action.player_character, self.stage.player1_character)
+        
+        return True
+    
+    
+    def frontdash(self, action):
+        pass
+
+    def duck(self, action):
+        pass
+
 class TextenStage:
-    def __init__(self, player1_room_id, player2_room_id, width=6, height=7) -> None:
+    def __init__(self, player1_room_id, player1_id, player2_room_id, player2_id, width=6, height=7) -> None:
+        self.player1_id = player1_id
+        self.player2_id = player2_id
         self.width = width
         self.height = height
-        self.player1_character = TextenPlayerCharacter(player1_room_id, 2,3)
-        self.player2_character = TextenPlayerCharacter(player2_room_id, 3,3)
+        self.player1_character = TextenPlayerCharacter(player1_room_id, player1_id, 2,3)
+        self.player2_character = TextenPlayerCharacter(player2_room_id, player2_id, 3,3)
         self.update_facing_directions(self.player1_character, self.player2_character)
 
     def calculate_distance_between_characters(self, player1_character, player2_character):
@@ -105,6 +199,26 @@ class TextenStage:
         self.player2_character.set_facing_directions(p2_directions)
         return True
 
+    def try_backdash(self, moving_character, waiting_character):
+        distance = self.calculate_distance_between_characters(moving_character, waiting_character)
+        waiting_char_position = {'x' : waiting_character.x_pos, 'y' : waiting_character.y_pos}
+        moving_character_position = {'x' : moving_character.x_pos, 'y' : moving_character.y_pos}
+        grid = [[x,y] for x in range(6) for y in range(7)]
+        valid_positions = []
+        for field in grid:
+            if self.calculate_distance_between_characters_manual(field[0], field[1], moving_character) == 0:
+                if self.calculate_distance_between_characters_manual(field[0], field[1], waiting_character) > distance: 
+                    valid_positions.append(field)
+        if len(valid_positions) > 0:
+            list_of_cross_products = [abs((field[1] - waiting_char_position['y']) * (moving_character_position['x'] - waiting_char_position['x']) - (field[0] - waiting_char_position['x']) * (moving_character_position['y'] - waiting_char_position['y'])) for field in valid_positions]
+        
+        cross_product_and_position_list = zip(list_of_cross_products, valid_positions)
+        best_bd_coordinate = sorted(list(cross_product_and_position_list))[0]
+        print(distance)
+        print(valid_positions)    
+        print(f"temp calc list {list_of_cross_products}")
+        print(best_bd_coordinate)
+
     def try_sidestep(self, moving_character, waiting_character, ss_direction):
         distance = self.calculate_distance_between_characters(moving_character, waiting_character)
         waiting_char_position = {'x' : waiting_character.x_pos, 'y' : waiting_character.y_pos}
@@ -117,6 +231,7 @@ class TextenStage:
                     valid_positions.append(field)
         print(distance)
         print(valid_positions)
+
 
         #BELOW CONDITION CHECKS WHICH SS COORDINATE IS THE FURTHEST AWAY FROM THE WAITING CHARACTER, AND REMOVES IT - THIS TO MAKE SURE THE SSing CHARACTER DOES ROUND CORNER MOVEMENT WHEN SSing FROM FAR AWAY
         if distance != 0 and len(valid_positions) > 2:             
@@ -229,7 +344,8 @@ class TextenStage:
             
 
 class TextenPlayerCharacter:
-    def __init__(self, player_room_id, x_pos, y_pos ,hp=180) -> None:
+    def __init__(self, player_room_id, player_id, x_pos, y_pos ,hp=180) -> None:
+        self.player_id = player_id
         self.x_pos = x_pos
         self.y_pos = y_pos
         self.player_room_id = player_room_id
@@ -250,9 +366,24 @@ class TextenPlayerCharacter:
     def get_facing_directions(self):
         return self.facing_directions
 
-class TextenMove:
-    def __init__(self) -> None:
-        pass
+class TextenAction:
+    def __init__(self, player_id, player_character, movement=False, attack=False, backdash=False, sidestep=False, frontdash=False, duck=False, low_crush=False, high_crush=False, block=False, backswing=False, homing=False, damage=0, range=0) -> None:
+        self.player_id = player_id
+        self.player_character = player_character
+        self.movement = movement
+        self.attack = attack
+        self.backdash = backdash
+        self.sidestep = sidestep
+        self.frontdash = frontdash
+        self.duck = duck
+        self.low_crush = low_crush
+        self.high_crush = high_crush
+        self.block = block
+        self.backswing = backswing
+        self.homing = homing
+        self.damage = damage
+        self.range = range
+
 
 #Definition of a Challenge sent from one player to the other.
 class TextenChallenge:

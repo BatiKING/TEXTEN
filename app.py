@@ -78,6 +78,14 @@ async def on_message(message):
                 await game_over(game, message.channel)
                 return
     
+    if '!cleanup' in message.content.lower() and message.author.guild_permissions.administrator:
+        your_fights_category = discord.utils.find(lambda g: g.name == your_fights_name, message.guild.categories)
+        texten_arena_category = discord.utils.find(lambda g: g.name == texten_arena_name, message.guild.categories)
+        for channel in your_fights_category.channels:
+            await channel.delete()
+
+        for channel in texten_arena_category.channels:
+            await channel.delete()
 
     if '!lookup' in message.content.lower():
         lookup_member = message.content.split(" ")[1]

@@ -36,7 +36,7 @@ hopkick - punishable
 backswing blow
 homing 
 
-TextenMove class - attributes
+TextenAction class - attributes
 
 
 
@@ -47,7 +47,7 @@ some whiffs will be punishable - only one player will take his turn as a "punish
 
 Moves will have specific range - 1 or 2 -
 1 - will only reach if both characters are next to eachother
-2 - will reach of there is 1 quare space between characters, - it will be punishable, and it will bring the attacking character 1 square closed to the defending character.
+2 - will reach if there is 1 quare space between characters, - it will be punishable, and it will bring the attacking character 1 square closer to the defending character.
 
 
 Haradas finger - % chance that a move will randomly crush other move
