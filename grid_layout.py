@@ -23,9 +23,11 @@ grid_layout ='''+------+------+------+------+------+------+
 
 
 p1_indicator = 'P1'
-p1_symbol= '██'
+# p1_symbol= '██'
+p1_symbol= '()'
 p2_indicator = 'P2'
-p2_symbol= '██'
+# p2_symbol= '██'
+p2_symbol= '[]'
 first_line_offset = 47
 second_line_offset = first_line_offset + 44
 one_column_offset = 7

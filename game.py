@@ -44,6 +44,10 @@ class TextenGame:
             'crouch': self.duck,
             'db': self.duck,
             'd': self.duck,
+            'b': self.block,
+            'block': self.block,
+            'n': self.block,
+            'neutral': self.block,
             'position': self.set_players_position,
         }
     def coin_flip(self):
@@ -126,8 +130,8 @@ class TextenGame:
         ss_dir = ss_dir_dict.get(args[-1].lower())
         if ss_dir:
             self.stage.update_facing_directions(self.stage.player1_character, self.stage.player2_character)
-            pre_ss_p1_position = self.stage.player1_character.get_position()
-            pre_ss_p2_position = self.stage.player2_character.get_position() 
+            # pre_ss_p1_position = self.stage.player1_character.get_position()
+            # pre_ss_p2_position = self.stage.player2_character.get_position() 
             if action.player_id == self.p1_id:
                 ss_to_position = self.stage.try_sidestep(action.player_character, self.stage.player2_character, ss_dir)
             elif action.player_id == self.p2_id:
@@ -151,14 +155,39 @@ class TextenGame:
         elif action.player_id == self.p2_id:
             bd_to_position = self.stage.try_backdash(action.player_character, self.stage.player1_character)
         
+        additional_message = ''
+        if bd_to_position:
+            action.player_character.set_position(bd_to_position[0], bd_to_position[1])
+        else:
+            additional_message = f"\n {action.player_id} couldn't backdash"
+
         return True
     
     
-    def frontdash(self, action):
-        pass
+    def frontdash(self, action, *args):
+        self.stage.update_facing_directions(self.stage.player1_character, self.stage.player2_character)
+        if action.player_id == self.p1_id:
+            fd_to_position = self.stage.try_frontdash(action.player_character, self.stage.player2_character)
+        elif action.player_id == self.p2_id:
+            fd_to_position = self.stage.try_frontdash(action.player_character, self.stage.player1_character)
+        
+        additional_message = ''
+        if fd_to_position:
+            action.player_character.set_position(fd_to_position[0], fd_to_position[1])
+        else:
+            additional_message = f"\n {action.player_id} couldn't front dash"
 
-    def duck(self, action):
-        pass
+        return True
+
+    def duck(self, action, *args):
+        self.stage.update_facing_directions(self.stage.player1_character, self.stage.player2_character)
+        action.duck = True
+        return True
+
+    def block(self, action, *args):
+        self.stage.update_facing_directions(self.stage.player1_character, self.stage.player2_character)
+        action.block = True
+        return True
 
 class TextenStage:
     def __init__(self, player1_room_id, player1_id, player2_room_id, player2_id, width=6, height=7) -> None:
@@ -210,14 +239,46 @@ class TextenStage:
                 if self.calculate_distance_between_characters_manual(field[0], field[1], waiting_character) > distance: 
                     valid_positions.append(field)
         if len(valid_positions) > 0:
-            list_of_cross_products = [abs((field[1] - waiting_char_position['y']) * (moving_character_position['x'] - waiting_char_position['x']) - (field[0] - waiting_char_position['x']) * (moving_character_position['y'] - waiting_char_position['y'])) for field in valid_positions]
-        
-        cross_product_and_position_list = zip(list_of_cross_products, valid_positions)
-        best_bd_coordinate = sorted(list(cross_product_and_position_list))[0]
-        print(distance)
-        print(valid_positions)    
-        print(f"temp calc list {list_of_cross_products}")
-        print(best_bd_coordinate)
+            list_of_cross_products = [abs((field[1] - waiting_char_position['y']) * (moving_character_position['x'] - waiting_char_position['x']) - (field[0] - waiting_char_position['x']) * (moving_character_position['y'] - waiting_char_position['y'])) for field in valid_positions]        
+            cross_product_and_position_list = zip(list_of_cross_products, valid_positions)
+            best_bd_coordinate = sorted(list(cross_product_and_position_list))[0][1]
+            print(distance)
+            print(valid_positions)    
+            print(f"temp calc list {list_of_cross_products}")
+            print(best_bd_coordinate)
+            return best_bd_coordinate
+        else:
+            return False
+
+    def try_frontdash(self, moving_character, waiting_character):
+        distance = self.calculate_distance_between_characters(moving_character, waiting_character)
+        waiting_char_position = {'x' : waiting_character.x_pos, 'y' : waiting_character.y_pos}
+        moving_character_position = {'x' : moving_character.x_pos, 'y' : moving_character.y_pos}
+        grid = [[x,y] for x in range(6) for y in range(7)]
+        valid_positions = []
+        if distance > 0:
+            for field in grid:                
+                if self.calculate_distance_between_characters_manual(field[0], field[1], moving_character) == 0:
+                    if self.calculate_distance_between_characters_manual(field[0], field[1], waiting_character) < distance: 
+                        valid_positions.append(field)
+        else:                
+            if opponent_bd_position := self.try_backdash(waiting_character, moving_character):
+                waiting_character.set_position(opponent_bd_position[0], opponent_bd_position[1])
+                #recursive call to try_frontdash - only called when opponent can be pushed back (try backdash on the opponent)
+                return self.try_frontdash(moving_character, waiting_character)
+
+        if len(valid_positions) > 0:
+            list_of_cross_products = [abs((field[1] - waiting_char_position['y']) * (moving_character_position['x'] - waiting_char_position['x']) - (field[0] - waiting_char_position['x']) * (moving_character_position['y'] - waiting_char_position['y'])) for field in valid_positions]        
+            cross_product_and_position_list = zip(list_of_cross_products, valid_positions)
+            best_fd_coordinate = sorted(list(cross_product_and_position_list))[0][1]
+            print(distance)
+            print(valid_positions)    
+            print(f"temp calc list {list_of_cross_products}")
+            print(best_fd_coordinate)
+            return best_fd_coordinate
+        else:
+            return False            
+
 
     def try_sidestep(self, moving_character, waiting_character, ss_direction):
         distance = self.calculate_distance_between_characters(moving_character, waiting_character)
